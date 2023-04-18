@@ -6,6 +6,7 @@ import sounddevice as sd
 import wavio as wv
 import datetime
 import openai
+import os
 
 # set up OpenAI API credentials
 openai.api_key = os.getenv("YOUR OPENAI_API_KEY")
