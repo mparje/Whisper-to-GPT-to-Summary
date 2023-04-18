@@ -8,7 +8,7 @@ import datetime
 import openai
 
 # set up OpenAI API credentials
-openai.api_key = open("key.txt", "r").read()
+openai.api_key = os.getenv("YOUR OPENAI_API_KEY")
 openai.proxy = 'http://127.0.0.1:7890'
 
 # list to keep track of conversation history
@@ -98,7 +98,7 @@ if st.button("Start Recording"):
             transcribed.append(latest_recording)
         
         #triggering phrase for GPT language model
-        if 'Please summarize this conversation in Chinese' in result.text:
+        if 'Please summarize this conversation in sPANISH' in result.text:
             print("--------Deploying Jarvis--------")
             transcript = open('./transcriptions/transcript.txt', 'r').read()
            
