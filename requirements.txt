@@ -4,4 +4,4 @@ sounddevice
 wavio
 datetime
 openai
-portaudio
+PortAudio
