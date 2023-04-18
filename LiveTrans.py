@@ -10,10 +10,13 @@ openai.api_key = open("key.txt", "r").read()
 openai.proxy = 'http://127.0.0.1:7890'
 
 message_history = [{"role": "assistant", "content": f"OK"}]
+
 def GPT(input):
     # tokenize the new input sentence
-    message_history.append({"role": "user", "content": f"帮我用中文总结以下的对话: {input}"}) # It is up to you to ask the model to output bullet points or just a general summary
-    prompt_history = [message_history[len(message_history)-2],message_history[len(message_history)-1]] # I believe by putting the previous messages into the current context can improve the model's overall accuracy.
+    message_history.append({"role": "user", "content": f"Please summarize this conversation in Chinese: {input}"}) 
+    # It is up to you to ask the model to output bullet points or just a general summary
+    prompt_history = [message_history[len(message_history)-2],message_history[len(message_history)-1]] 
+    # I believe by putting the previous messages into the current context can improve the model's overall accuracy.
     completion = openai.ChatCompletion.create(
       model="gpt-3.5-turbo", #10x cheaper than davinci, and better. $0.002 per 1k tokens
       messages=prompt_history
@@ -23,12 +26,11 @@ def GPT(input):
     message_history.append({"role": "assistant", "content": f"{reply_content}"})
     return reply_content
 
+freq = 44100 
+duration = 5 
 
-
-
-freq = 44100 # frequency change
-duration = 5 # in seconds
 print('----------Recording----------')
+
 # find most recent files in a directory
 recordings_dir = os.path.join('recordings', '*')
 
@@ -36,7 +38,6 @@ model = whisper.load_model("base")
 
 # list to store which wav files have been transcribed
 transcribed = []
-
 
 while True:
     ts = datetime.datetime.now()
@@ -52,8 +53,10 @@ while True:
 
     # Convert the NumPy array to audio file
     wv.write(f"./recordings/{filename}.wav", recording, freq, sampwidth=2)
+
     # get most recent wav recording in the recordings directory
     files = sorted(glob.iglob(recordings_dir), key=os.path.getctime, reverse=True)
+
     if len(files) < 1:
         continue
 
@@ -76,8 +79,12 @@ while True:
 
             # save list of transcribed recordings so that we don't transcribe the same one again
             transcribed.append(latest_recording)
+        
         #triggering phrase for GPT language model
-        if '幫我總結' in result.text:
+        if 'Please summarize this conversation in Chinese' in result.text:
+            print("--------Deploying Jarvis--------")
+            transcript = open('./transcriptions/transcript.txt', 'r').read()
+           
             print("--------Deploying Jarvis--------")
             transcript = open('./transcriptions/transcript.txt', 'r').read()
             print(GPT(transcript))
