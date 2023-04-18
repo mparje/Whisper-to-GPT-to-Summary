@@ -1,3 +1,4 @@
+import streamlit as st
 import config
 import whisper
 import os, glob
@@ -6,66 +7,82 @@ import wavio as wv
 import datetime
 import openai
 
+# set up OpenAI API credentials
 openai.api_key = open("key.txt", "r").read()
 openai.proxy = 'http://127.0.0.1:7890'
 
+# list to keep track of conversation history
 message_history = [{"role": "assistant", "content": f"OK"}]
 
+# function to run GPT-3 model and generate response
 def GPT(input):
     # tokenize the new input sentence
     message_history.append({"role": "user", "content": f"Please summarize this conversation in Chinese: {input}"}) 
     # It is up to you to ask the model to output bullet points or just a general summary
     prompt_history = [message_history[len(message_history)-2],message_history[len(message_history)-1]] 
     # I believe by putting the previous messages into the current context can improve the model's overall accuracy.
-    completion = openai.ChatCompletion.create(
-      model="gpt-3.5-turbo", #10x cheaper than davinci, and better. $0.002 per 1k tokens
-      messages=prompt_history
+    completion = openai.Completion.create(
+      engine="davinci", # use the davinci engine for better accuracy
+      prompt="\n".join([f"{msg['role']}: {msg['content']}" for msg in prompt_history]), # format conversation history for input
+      max_tokens=1024, # limit output to 1024 tokens
+      n=1, # only generate one response
+      stop=None, # don't stop generation until max_tokens is reached
     )
-    print(f"{completion.usage.total_tokens} tokens consumed.")
-    reply_content = completion.choices[0].message.content
+    st.write(f"{completion.total_characters} tokens consumed.")
+    reply_content = completion.choices[0].text
     message_history.append({"role": "assistant", "content": f"{reply_content}"})
     return reply_content
 
+# set up audio recording parameters
 freq = 44100 
 duration = 5 
 
-print('----------Recording----------')
+# create recordings directory if it doesn't exist
+if not os.path.exists('recordings'):
+    os.mkdir('recordings')
 
-# find most recent files in a directory
-recordings_dir = os.path.join('recordings', '*')
-
+# load pre-trained model for audio transcription
 model = whisper.load_model("base")
 
 # list to store which wav files have been transcribed
 transcribed = []
 
-while True:
+# main Streamlit app
+st.title("Whisper-Jarvis Demo")
+
+st.write("Press the button below to start recording audio.")
+
+# add a button to start recording audio
+if st.button("Start Recording"):
+    st.write('Recording...')
+
+    # generate filename based on current timestamp
     ts = datetime.datetime.now()
     filename = ts.strftime("%Y_%m_%d_%H_%M_%S")
-    print(filename)
 
-    # Start recorder with the given values of duration and sample frequency
-    # PTL Note: I had to change the channels value in the original code to fix a bug
+    # start audio recording
     recording = sd.rec(int(duration * freq), samplerate=freq, channels=1)
-
-    # Record audio for the given number of seconds
     sd.wait()
 
-    # Convert the NumPy array to audio file
+    # save audio recording to disk
     wv.write(f"./recordings/{filename}.wav", recording, freq, sampwidth=2)
 
+    st.write(f"Saved audio recording to ./recordings/{filename}.wav")
+
     # get most recent wav recording in the recordings directory
-    files = sorted(glob.iglob(recordings_dir), key=os.path.getctime, reverse=True)
+    files = sorted(glob.iglob(os.path.join('recordings', '*')), key=os.path.getctime, reverse=True)
 
     if len(files) < 1:
-        continue
+        st.write("No audio files found.")
+    else:
+        latest_recording = files[0]
+        latest_recording_filename = latest_recording.split('_')[1]
 
-    latest_recording = files[0]
-    latest_recording_filename = latest_recording.split('_')[1]
-
-    if os.path.exists(latest_recording) and not latest_recording in transcribed:
-        audio = whisper.load_audio(latest_recording)
-        audio = whisper.pad_or_trim(audio)
+        # check if audio file has already been transcribed
+        if os.path.exists(latest_recording) and not latest_recording in transcribed:
+            # load audio file and preprocess for transcription
+            audio = whisper.load_audio(latest_recording)
+            audio = whisper.pad_or_trim(audio)
         mel = whisper.log_mel_spectrogram(audio).to(model.device)
         options = whisper.DecodingOptions(fp16=False)
 
