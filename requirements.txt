@@ -1,0 +1,6 @@
+streamlit
+whisper
+sounddevice
+wavio
+datetime
+openai
