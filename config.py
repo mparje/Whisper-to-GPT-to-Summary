@@ -1,4 +1,4 @@
-OPENAI_API_KEY = open("./key.txt", "r").read()
+
 
 TRANSCRIPT_FILE = "transcriptions/transcript.txt"
 
